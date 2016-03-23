@@ -31,12 +31,14 @@ import java.security.cert.X509Certificate;
 import java.util.TreeMap;
 import java.util.logging.Logger;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.Configuration;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -54,6 +56,9 @@ import io.jsonwebtoken.JwsHeader;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.impl.TextCodec;
+import org.glassfish.jersey.client.JerseyClient;
+import org.glassfish.jersey.client.JerseyClientBuilder;
+import sun.net.www.protocol.https.DefaultHostnameVerifier;
 
 public class Acme {
 	private static final String AGREEMENT_KEY = "agreement";
@@ -416,9 +421,15 @@ public class Acme {
 				.compact();
 	}
 
+	public static class ConfiguredClient extends JerseyClient {
+		protected ConfiguredClient(Configuration config, SSLContext sslContext, HostnameVerifier verifier) {
+			super(config, sslContext, verifier);
+		}
+	}
+
 	protected Client getRestClient(){
 		try{
-			Client client = ClientBuilder.newBuilder().sslContext((trustAllCertificate) ? getTrustAllCertificateSSLContext() : SSLContext.getDefault()).build();
+			Client client = new ConfiguredClient(JerseyClientBuilder.newBuilder().getConfiguration(), (trustAllCertificate) ? getTrustAllCertificateSSLContext() : SSLContext.getDefault(), new DefaultHostnameVerifier());
 			
 			if (debugHttpRequests){
 				try{
